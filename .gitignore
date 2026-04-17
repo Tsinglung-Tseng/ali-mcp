@@ -1,0 +1,24 @@
+# 编译产物
+ali.mcp
+/ali-mcp
+/bin/
+
+# 运行时 cookie 目录（敏感凭据）
+# 注：源码包也叫 cookies/，所以用点前缀目录存运行时数据避免冲突
+/.cookies/
+/cookies/*.json
+!/cookies/.gitkeep
+
+# go rod 下载的浏览器缓存
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store
+
+# 日志
+*.log

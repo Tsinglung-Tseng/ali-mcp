@@ -4,7 +4,7 @@
 
 **项目描述**：阿里系 MCP 服务器 —— 仿照 `xiaohongshu-mcp` 的架构，先覆盖闲鱼（Xianyu / Goofish）和淘宝（Taobao），通过 go-rod 无头浏览器执行登录、搜索、详情抓取等操作，并以 MCP 协议暴露给 LLM 客户端。
 
-**参考项目**：`../xhs/xiaohongshu-mcp`（架构、分层、登录方案、MCP 工具注册模式全部参照）
+**参考项目**：[`xpzouying/xiaohongshu-mcp`](https://github.com/xpzouying/xiaohongshu-mcp)（架构、分层、登录方案、MCP 工具注册模式全部参照）
 
 **技术栈**：
 - Go 1.24

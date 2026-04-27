@@ -20,15 +20,34 @@ go build -o ali-mcp .
 
 ## MCP 工具
 
-| 工具 | 说明 |
-|------|------|
-| `taobao_check_login_status` | 检查淘宝登录态 |
-| `taobao_get_login_qrcode` | 获取淘宝扫码登录二维码 |
-| `taobao_delete_cookies` | 删除淘宝 cookie（重置登录） |
-| `xianyu_check_login_status` | 检查闲鱼 h5 登录态 |
-| `xianyu_delete_cookies` | 删除闲鱼 cookie |
+### 淘宝（Taobao / Tmall）
+
+| 工具 | 类型 | 说明 |
+|------|------|------|
+| `taobao_check_login_status` | read | 检查淘宝登录态 |
+| `taobao_get_login_qrcode` | read | 获取扫码登录二维码（base64 PNG） |
+| `taobao_search` | read | 搜索商品，返回前 N 条（标题/价格/店铺/发货地/URL） |
+| `taobao_get_item_detail` | read | 商品详情（标题/价格/销量/店铺/SKU/主图） |
+| `taobao_delete_cookies` | destructive | 删除 cookie 重置登录 |
+
+### 闲鱼（Xianyu / Goofish）
+
+| 工具 | 类型 | 说明 |
+|------|------|------|
+| `xianyu_check_login_status` | read | 检查 h5.m.goofish.com 登录态 |
+| `xianyu_search` | read | 搜索商品（游客态可访问） |
+| `xianyu_get_item_detail` | read | 商品详情（标题/价格/原价/描述/卖家/图片/想要数） |
+| `xianyu_get_user_profile` | read | 卖家主页（昵称/信用/在售已售数 + 最近 20 个商品） |
+| `xianyu_refresh` | write | 擦亮商品（卖家把商品刷到 feed 顶部，需登录） |
+| `xianyu_delist` | destructive | 下架商品（需登录，自己的商品） |
+| `xianyu_publish` | write | 发布商品（**stub 未实现**，等实机走查后填回） |
+| `xianyu_delete_cookies` | destructive | 删除 cookie |
 
 > 闲鱼无独立扫码：阿里 SSO 会从淘宝回流，先登录淘宝再访问闲鱼 h5 即可。
+>
+> ⚠️ 所有 DOM 选择器为初版假设，**需实机校正**才能可靠工作（参见每个 `*.go` 文件顶部的 `TODO(selectors)` 注释）。
+>
+> 📋 `xianyu_publish` 当前是 stub —— 实机研究指南见 [`docs/debug/20260427-xianyu-publish-research.md`](docs/debug/20260427-xianyu-publish-research.md)。
 
 ## 接入 Claude Code
 

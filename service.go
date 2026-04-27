@@ -108,6 +108,17 @@ func (s *TaobaoService) Search(ctx context.Context, keyword string, limit int) (
 	return taobao.NewSearch(page).Search(ctx, keyword, limit)
 }
 
+// GetItemDetail 淘宝商品详情。需已登录。
+func (s *TaobaoService) GetItemDetail(ctx context.Context, itemURL string) (*taobao.Detail, error) {
+	b := newBrowser(configs.PlatformTaobao)
+	defer b.Close()
+
+	page := b.NewPage()
+	defer page.Close()
+
+	return taobao.NewDetail(page).GetDetail(ctx, itemURL)
+}
+
 // ---------------- XianyuService ----------------
 
 // XianyuService 闲鱼业务服务。
@@ -139,6 +150,72 @@ func (s *XianyuService) CheckLoginStatus(ctx context.Context) (*LoginStatusRespo
 func (s *XianyuService) DeleteCookies(ctx context.Context) error {
 	path := cookies.GetCookiesFilePath(configs.PlatformXianyu)
 	return cookies.NewLoadCookie(path).DeleteCookies()
+}
+
+// Search 闲鱼商品搜索（h5 站，游客态可访问）。
+func (s *XianyuService) Search(ctx context.Context, keyword string, limit int) (*xianyu.SearchResult, error) {
+	b := newBrowser(configs.PlatformXianyu)
+	defer b.Close()
+
+	page := b.NewPage()
+	defer page.Close()
+
+	return xianyu.NewSearch(page).Search(ctx, keyword, limit)
+}
+
+// GetItemDetail 闲鱼商品详情。idOrURL 接受商品 ID 或完整 URL。
+func (s *XianyuService) GetItemDetail(ctx context.Context, idOrURL string) (*xianyu.Detail, error) {
+	b := newBrowser(configs.PlatformXianyu)
+	defer b.Close()
+
+	page := b.NewPage()
+	defer page.Close()
+
+	return xianyu.NewDetail(page).GetDetail(ctx, idOrURL)
+}
+
+// GetUserProfile 闲鱼卖家主页摘要 + 最近商品。
+func (s *XianyuService) GetUserProfile(ctx context.Context, userID string) (*xianyu.UserProfile, error) {
+	b := newBrowser(configs.PlatformXianyu)
+	defer b.Close()
+
+	page := b.NewPage()
+	defer page.Close()
+
+	return xianyu.NewUser(page).GetProfile(ctx, userID)
+}
+
+// RefreshItem 擦亮商品（需登录）。
+func (s *XianyuService) RefreshItem(ctx context.Context, itemID string) (*xianyu.ManageActionResult, error) {
+	b := newBrowser(configs.PlatformXianyu)
+	defer b.Close()
+
+	page := b.NewPage()
+	defer page.Close()
+
+	return xianyu.NewManage(page).Refresh(ctx, itemID)
+}
+
+// DelistItem 下架商品（需登录）。
+func (s *XianyuService) DelistItem(ctx context.Context, itemID string) (*xianyu.ManageActionResult, error) {
+	b := newBrowser(configs.PlatformXianyu)
+	defer b.Close()
+
+	page := b.NewPage()
+	defer page.Close()
+
+	return xianyu.NewManage(page).Delist(ctx, itemID)
+}
+
+// PublishItem 发布商品（stub，未实现）。
+func (s *XianyuService) PublishItem(ctx context.Context, args xianyu.PublishArgs) (*xianyu.ManageActionResult, error) {
+	b := newBrowser(configs.PlatformXianyu)
+	defer b.Close()
+
+	page := b.NewPage()
+	defer page.Close()
+
+	return xianyu.NewPublish(page).Publish(ctx, args)
 }
 
 // ---------------- helpers ----------------

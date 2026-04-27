@@ -41,26 +41,30 @@
 - [x] `go build ./...` 通过
 - [ ] **实机跑通**：`go run . -headless=false` + 扫码登录 + 选择器校正
 
-### Phase 2 — 只读工具
-- [ ] `taobao.search_items`（入口待定：`s.taobao.com` 桌面 vs `m.taobao.com` 移动）
-- [ ] `taobao.get_item_detail`
-- [ ] `xianyu.search_items`（`h5.m.goofish.com`）
-- [ ] `xianyu.get_item_detail`
-- [ ] `xianyu.get_user_profile`
+### Phase 2 — 只读工具（代码完成 2026-04-27，选择器待实机校正）
+- [x] `taobao_search`（入口 `s.taobao.com` 桌面站；React hash class 前缀匹配 + simba 广告过滤 + 去重）
+- [x] `taobao_get_item_detail`
+- [x] `xianyu_search`（入口 `h5.m.goofish.com`，游客态可访问）
+- [x] `xianyu_get_item_detail`
+- [x] `xianyu_get_user_profile`（卖家主页摘要 + 最近 20 个商品）
 
-### Phase 3 — 写操作（风险高，后续评估）
-- [ ] 闲鱼发布宝贝
-- [ ] 闲鱼私信
-- [ ] 淘宝加购物车 / 下单（慎重）
+### Phase 3 — 写操作
+- [x] **闲鱼擦亮（refresh）**：单步操作（点列表里的擦亮按钮），代码完成
+- [x] **闲鱼下架（delist）**：两步（三点菜单 → 下架），代码完成
+- [ ] **闲鱼发布宝贝**：5 步表单 + 图片上传，代码 stub，研究指南见 `docs/debug/20260427-xianyu-publish-research.md`
+- [ ] 闲鱼私信（未开始）
+- [ ] 淘宝加购物车 / 下单（慎重，未开始）
 
 ## ⏳ 待完成
 
 - [x] 确认 Go module 路径 → `github.com/Tsinglung-Tseng/ali.mcp`
 - [x] Phase 1 骨架编译通过（`go build ./...` 无错误）
-- [ ] **实机首跑**：`go run . -headless=false`，扫淘宝二维码 → 校验 DOM 选择器
+- [x] 第一次 git 初始化 + 推到 `github.com/Tsinglung-Tseng/ali-mcp`（2026-04-27 开源，MIT license）
+- [x] Phase 2/3 全部代码 + stub 编译通过（`go build ./...` + `go vet ./...` 无错误）
+- [ ] **实机首跑**：`go run . -headless=false`，扫淘宝二维码 → 校验所有工具的 DOM 选择器
 - [ ] 淘宝登录后 cookie 自动持久化 → 访问闲鱼 h5 自动 SSO → 闲鱼 `check_login_status` 返回 true
 - [ ] 在 Claude Code 中配置并调用 ali-mcp 工具（mcp config 指向 `http://localhost:18070/mcp`）
-- [ ] 第一次 git 初始化 + 推到 `github.com/Tsinglung-Tseng/ali.mcp`
+- [ ] 实机走查闲鱼发布流程，回填 `xianyu/publish.go` 的选择器（见 `docs/debug/20260427-xianyu-publish-research.md`）
 
 ## 🔑 关键设计决策（待定）
 

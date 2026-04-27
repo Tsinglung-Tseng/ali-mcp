@@ -34,6 +34,7 @@ func setupRoutes(appServer *AppServer) *gin.Engine {
 			tb.GET("/login/status", appServer.taobaoLoginStatusHandler)
 			tb.GET("/login/qrcode", appServer.taobaoLoginQrcodeHandler)
 			tb.DELETE("/login/cookies", appServer.taobaoDeleteCookiesHandler)
+			tb.GET("/search", appServer.taobaoSearchHandler)
 		}
 		xy := api.Group("/xianyu")
 		{

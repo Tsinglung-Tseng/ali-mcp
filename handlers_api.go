@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -9,6 +10,8 @@ import (
 	"github.com/Tsinglung-Tseng/ali.mcp/configs"
 	"github.com/Tsinglung-Tseng/ali.mcp/cookies"
 )
+
+func parseInt(s string) (int, error) { return strconv.Atoi(s) }
 
 // respondError 返回错误响应
 func respondError(c *gin.Context, statusCode int, code, message string, details any) {
@@ -36,6 +39,26 @@ func (s *AppServer) taobaoLoginQrcodeHandler(c *gin.Context) {
 	result, err := s.taobao.GetLoginQrcode(c.Request.Context())
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "QRCODE_FAILED", "获取淘宝登录二维码失败", err.Error())
+		return
+	}
+	respondSuccess(c, result, "ok")
+}
+
+func (s *AppServer) taobaoSearchHandler(c *gin.Context) {
+	keyword := c.Query("q")
+	if keyword == "" {
+		respondError(c, http.StatusBadRequest, "MISSING_KEYWORD", "缺少 q 参数", nil)
+		return
+	}
+	limit := 20
+	if v := c.Query("limit"); v != "" {
+		if n, err := parseInt(v); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	result, err := s.taobao.Search(c.Request.Context(), keyword, limit)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "SEARCH_FAILED", "淘宝搜索失败", err.Error())
 		return
 	}
 	respondSuccess(c, result, "ok")

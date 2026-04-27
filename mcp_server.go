@@ -13,6 +13,12 @@ import (
 // boolPtr 方便 ToolAnnotations 传指针。
 func boolPtr(b bool) *bool { return &b }
 
+// TaobaoSearchArgs 淘宝搜索工具参数。
+type TaobaoSearchArgs struct {
+	Keyword string `json:"keyword" jsonschema:"搜索关键词，如 健康的炒锅"`
+	Limit   int    `json:"limit,omitempty" jsonschema:"返回条数，默认 20；0 表示本页全部"`
+}
+
 // InitMCPServer 初始化 MCP Server 并注册所有工具。
 func InitMCPServer(appServer *AppServer) *mcp.Server {
 	server := mcp.NewServer(
@@ -86,6 +92,17 @@ func registerTools(server *mcp.Server, appServer *AppServer) {
 
 	mcp.AddTool(server,
 		&mcp.Tool{
+			Name:        "taobao_search",
+			Description: "在淘宝搜索商品，返回前 N 个商品的标题/价格/店铺/发货地/商品 URL。需已登录。",
+			Annotations: &mcp.ToolAnnotations{Title: "Taobao: Search Items", ReadOnlyHint: true},
+		},
+		withPanicRecovery("taobao_search", func(ctx context.Context, _ *mcp.CallToolRequest, args TaobaoSearchArgs) (*mcp.CallToolResult, any, error) {
+			return convertToMCPResult(appServer.handleTaobaoSearch(ctx, args)), nil, nil
+		}),
+	)
+
+	mcp.AddTool(server,
+		&mcp.Tool{
 			Name:        "taobao_delete_cookies",
 			Description: "删除淘宝 cookies 文件，重置登录状态",
 			Annotations: &mcp.ToolAnnotations{Title: "Taobao: Delete Cookies", DestructiveHint: boolPtr(true)},
@@ -119,7 +136,7 @@ func registerTools(server *mcp.Server, appServer *AppServer) {
 		}),
 	)
 
-	logrus.Infof("registered %d MCP tools", 5)
+	logrus.Infof("registered %d MCP tools", 6)
 }
 
 // convertToMCPResult 将内部 MCPToolResult 转成 SDK 格式。

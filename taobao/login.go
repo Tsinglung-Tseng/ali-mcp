@@ -2,10 +2,12 @@ package taobao
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // LoginAction 淘宝扫码登录。
@@ -19,70 +21,90 @@ func NewLogin(page *rod.Page) *LoginAction {
 	return &LoginAction{page: page}
 }
 
-// 入口 URL 及登录态标识元素选择器。
-// TODO(selectors): 以下选择器基于经验假设，首次跑通需实机校验并更新。
 const (
-	// taobao 首页；已登录时右上角有用户昵称节点。
-	homeURL = "https://www.taobao.com"
-	// 登录页；未登录访问 my.taobao.com 会被跳到这里。
+	// 访问 my.taobao.com 未登录会被重定向到登录页；已登录会留在 my。
+	// 用"是否重定向到 login.taobao.com"作为登录态的稳健判断。
+	probeURL = "https://i.taobao.com/my_taobao.htm"
+	// 登录页；用于主动拉起扫码。
 	loginURL = "https://login.taobao.com/member/login.jhtml"
-	// 已登录后用户昵称区域（.site-nav-login-info .site-nav-user 可能变动）。
-	loggedInSel = ".site-nav-login-info .site-nav-user"
-	// 扫码登录面板中的二维码 img 节点。
-	qrcodeSel = "#login .qrcode-img, .iconfont-qrcode + img, canvas.J_QRCodeImg"
+	// 登录页域名片段，用于判断是否仍在登录页。
+	loginDomainFragment = "login.taobao.com"
+	// 扫码二维码元素；淘宝当前为 canvas，没有 src 属性，这里只用于"能找到"判断。
+	// TODO(selectors): 实机确认 canvas 的确切类名。
+	qrcodeSel = "canvas, #J_Quick2Static .qrcode-img, .qrcode-img img"
 )
 
-// CheckLoginStatus 通过访问首页检查登录态。
+// CheckLoginStatus 访问 my.taobao.com 后看最终 URL：
+// 若仍在/被跳到 login.taobao.com，则未登录；否则已登录。
 func (a *LoginAction) CheckLoginStatus(ctx context.Context) (bool, error) {
 	pp := a.page.Context(ctx)
-	pp.MustNavigate(homeURL).MustWaitLoad()
+	pp.MustNavigate(probeURL).MustWaitLoad()
 
 	time.Sleep(1 * time.Second)
 
-	exists, _, err := pp.Has(loggedInSel)
+	info, err := pp.Info()
 	if err != nil {
-		return false, errors.Wrap(err, "check login status failed")
+		return false, errors.Wrap(err, "get page info")
 	}
-	return exists, nil
+	return !strings.Contains(info.URL, loginDomainFragment), nil
 }
 
-// FetchQrcodeImage 拉取扫码登录二维码；若已登录返回 (nil, true, nil)。
-// 返回 base64 data URL 或远程 src。
+// FetchQrcodeImage 拉起登录页并等待二维码出现。
+// 若访问时就已登录（URL 没停在 login.taobao.com），返回 (nil, true, nil)。
+// 当前淘宝用 canvas 画二维码，没有 src；拿不到 src 不算错（返回 ""），
+// 用户直接在可见浏览器窗口中扫码即可，登录检测靠 URL 跳转。
 func (a *LoginAction) FetchQrcodeImage(ctx context.Context) (string, bool, error) {
 	pp := a.page.Context(ctx)
 
 	pp.MustNavigate(loginURL).MustWaitLoad()
 	time.Sleep(2 * time.Second)
 
-	// 可能已登录后会被跳回首页
-	if exists, _, _ := pp.Has(loggedInSel); exists {
+	info, err := pp.Info()
+	if err != nil {
+		return "", false, errors.Wrap(err, "get page info after navigate")
+	}
+	if !strings.Contains(info.URL, loginDomainFragment) {
+		// 已经被跳走（可能本就已登录）
 		return "", true, nil
 	}
 
-	el, err := pp.Element(qrcodeSel)
-	if err != nil {
-		return "", false, errors.Wrap(err, "qrcode element not found")
+	// 尝试抓 img 形式的二维码；拿不到 src 也不 fail，让调用方靠 URL 检测登录态。
+	if el, e := pp.Element(qrcodeSel); e == nil && el != nil {
+		if src, e2 := el.Attribute("src"); e2 == nil && src != nil && *src != "" {
+			return *src, false, nil
+		}
 	}
-	src, err := el.Attribute("src")
-	if err != nil || src == nil || *src == "" {
-		return "", false, errors.Wrap(err, "get qrcode src failed")
-	}
-	return *src, false, nil
+	logrus.Debug("[taobao] qrcode src not available (likely canvas); relying on browser window for scan")
+	return "", false, nil
 }
 
-// WaitForLogin 轮询登录态；用户扫码成功后返回 true，ctx 超时返回 false。
+// WaitForLogin 轮询登录态：扫码成功后页面会跳离 login.taobao.com。
+// 每 5 秒打一条 debug log，方便排查用户扫码过程。
 func (a *LoginAction) WaitForLogin(ctx context.Context) bool {
 	pp := a.page.Context(ctx)
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
+	var ticks int
 	for {
 		select {
 		case <-ctx.Done():
+			logrus.Info("[taobao] WaitForLogin: context done, timeout")
 			return false
 		case <-ticker.C:
-			el, err := pp.Element(loggedInSel)
-			if err == nil && el != nil {
+			ticks++
+			info, err := pp.Info()
+			if err != nil {
+				logrus.Debugf("[taobao] WaitForLogin page.Info err: %v", err)
+				continue
+			}
+			if ticks%5 == 0 {
+				logrus.Infof("[taobao] WaitForLogin tick=%ds, url=%s", ticks, info.URL)
+			}
+			if !strings.Contains(info.URL, loginDomainFragment) {
+				logrus.Infof("[taobao] WaitForLogin: login detected, url=%s", info.URL)
+				// 页面跳走后再等 2 秒让目标页写完 cookie
+				time.Sleep(2 * time.Second)
 				return true
 			}
 		}

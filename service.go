@@ -97,6 +97,17 @@ func (s *TaobaoService) DeleteCookies(ctx context.Context) error {
 	return cookies.NewLoadCookie(path).DeleteCookies()
 }
 
+// Search 淘宝商品搜索。limit 0 表示返回当页全部。
+func (s *TaobaoService) Search(ctx context.Context, keyword string, limit int) (*taobao.SearchResult, error) {
+	b := newBrowser(configs.PlatformTaobao)
+	defer b.Close()
+
+	page := b.NewPage()
+	defer page.Close()
+
+	return taobao.NewSearch(page).Search(ctx, keyword, limit)
+}
+
 // ---------------- XianyuService ----------------
 
 // XianyuService 闲鱼业务服务。

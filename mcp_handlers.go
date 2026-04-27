@@ -38,6 +38,35 @@ func (s *AppServer) handleTaobaoGetLoginQrcode(ctx context.Context) *MCPToolResu
 	return qrcodeResult("请用手机淘宝扫码登录 👇", result.Img, result.Timeout)
 }
 
+func (s *AppServer) handleTaobaoSearch(ctx context.Context, args TaobaoSearchArgs) *MCPToolResult {
+	logrus.Infof("MCP: taobao search keyword=%q limit=%d", args.Keyword, args.Limit)
+
+	limit := args.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	result, err := s.taobao.Search(ctx, args.Keyword, limit)
+	if err != nil {
+		return errText("淘宝搜索失败: " + err.Error())
+	}
+	if len(result.Items) == 0 {
+		return okText(fmt.Sprintf("未搜到商品（关键词: %s，页面 URL: %s）", result.Keyword, result.PageURL))
+	}
+	var lines []string
+	lines = append(lines, fmt.Sprintf("🔍 淘宝搜索 %q，共 %d 条（前 %d 条）：\n", result.Keyword, result.Count, len(result.Items)))
+	for i, it := range result.Items {
+		lines = append(lines, fmt.Sprintf("%d. %s", i+1, it.Title))
+		lines = append(lines, fmt.Sprintf("   价格: %s  |  %s  |  %s", or(it.Price, "-"), or(it.Shop, "-"), or(it.Location, "-")))
+		if it.DealCount != "" {
+			lines = append(lines, "   "+it.DealCount)
+		}
+		if it.URL != "" {
+			lines = append(lines, "   "+it.URL)
+		}
+	}
+	return okText(strings.Join(lines, "\n"))
+}
+
 func (s *AppServer) handleTaobaoDeleteCookies(ctx context.Context) *MCPToolResult {
 	logrus.Info("MCP: taobao delete_cookies")
 	if err := s.taobao.DeleteCookies(ctx); err != nil {
@@ -78,6 +107,14 @@ func okText(s string) *MCPToolResult {
 
 func errText(s string) *MCPToolResult {
 	return &MCPToolResult{Content: []MCPContent{{Type: "text", Text: s}}, IsError: true}
+}
+
+// or 返回第一个非空字符串。
+func or(s, fallback string) string {
+	if s != "" {
+		return s
+	}
+	return fallback
 }
 
 // qrcodeResult 返回提示文本 + 二维码图片（base64 去掉 data URL 前缀）。
